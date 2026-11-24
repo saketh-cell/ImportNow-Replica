@@ -142,9 +142,8 @@ function hullGeometry(){
 const HG=hullGeometry();
 
 /* textures for superstructure + containers */
-const winTex=ctex(256
-,64,(g,w,h)=>{g.fillStyle='#eef1f4';g.fillRect(0,0,w,h);for(let i=0;i<9;i++){const x=10+i*27;const gr=g.createLinearGradient(0,18,0,42);gr.addColorStop(0,'#3e5672');gr.addColorStop(1,'#1b2838');g.fillStyle=gr;g.fillRect(x,20,17,22)}g.fillStyle='rgba(0,0,0,.08)';g.fillRect(0,h-3,w,3)}});
-const bridgeTex=ctex(256,64,(g,w,h)=>{g.fillStyle='#eef1f4';g.fillRect(0,0,w,h);const gr=g.createLinearGradient(0,12,0,44);gr.addColorStop(0,'#5b7896');gr.addColorStop(1,'#14202e');g.fillStyle=gr;g.fillRect(0,14,w,28);g.fillStyle='#eef1f4';for(let x=0;x<w;x+=21)g.fillRect(x,14,2,28)}});
+const winTex=ctex(256,64,(g,w,h)=>{g.fillStyle='#eef1f4';g.fillRect(0,0,w,h);for(let i=0;i<9;i++){const x=10+i*27;const gr=g.createLinearGradient(0,18,0,42);gr.addColorStop(0,'#3e5672');gr.addColorStop(1,'#1b2838');g.fillStyle=gr;g.fillRect(x,20,17,22)}g.fillStyle='rgba(0,0,0,.08)';g.fillRect(0,h-3,w,3)});
+const bridgeTex=ctex(256,64,(g,w,h)=>{g.fillStyle='#eef1f4';g.fillRect(0,0,w,h);const gr=g.createLinearGradient(0,12,0,44);gr.addColorStop(0,'#5b7896');gr.addColorStop(1,'#14202e');g.fillStyle=gr;g.fillRect(0,14,w,28);g.fillStyle='#eef1f4';for(let x=0;x<w;x+=21)g.fillRect(x,14,2,28)});
 const white=M(0xeef1f4,.55,.1),winMat=new THREE.MeshStandardMaterial({map:winTex,roughness:.45,metalness:.1}),bridgeMat=new THREE.MeshStandardMaterial({map:bridgeTex,roughness:.3,metalness:.2});
 const corrugated=(base,label)=>ctex(512,256,(g,w,h)=>{
   g.fillStyle=base;g.fillRect(0,0,w,h);
