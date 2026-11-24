@@ -31,13 +31,39 @@ const sun=new THREE.Vector3().setFromSphericalCoords(1,THREE.MathUtils.degToRad(
 
 const sky=new Sky();sky.scale.setScalar(10000);
 const su=sky.material.uniforms;su.turbidity.value=5;su.rayleigh.value=1.4;su.mieCoefficient.value=.004;su.mieDirectionalG.value=.82;su.sunPosition.value.copy(sun);
-const pmrem=new THREE.PMREMGenerator(renderer);
+const pmremGen=new THREE.PMREMGenerator(renderer);
 const envScene=new THREE.Scene();envScene.add(sky);
-scene.environment=pmrem.fromScene(envScene).texture;
+try {
+  scene.environment=pmremGen.fromScene(envScene).texture;
+  pmremGen.dispose();
+} catch(e) {
+  console.warn('PMREM environment generation skipped:', e);
+}
 scene.add(sky);
 
-const waterNormals=new THREE.TextureLoader().load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/waternormals.jpg');
-waterNormals.wrapS=waterNormals.wrapT=THREE.RepeatWrapping;
+function makeNormalFallback(){
+  const c=document.createElement('canvas');c.width=c.height=128;
+  const g=c.getContext('2d');const id=g.createImageData(128,128);
+  for(let i=0;i<id.data.length;i+=4){
+    const x=(i/4)%128,y=Math.floor((i/4)/128);
+    const nx=Math.sin(x*0.3)*0.3+0.5,ny=Math.cos(y*0.3)*0.3+0.5;
+    id.data[i]=nx*255;id.data[i+1]=ny*255;id.data[i+2]=255;id.data[i+3]=255;
+  }
+  g.putImageData(id,0,0);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+const normalFallback=makeNormalFallback();
+let waterNormals=normalFallback;
+try {
+  const loaded=new THREE.TextureLoader().load(
+    'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/waternormals.jpg',
+    tex=>{tex.wrapS=tex.wrapT=THREE.RepeatWrapping;if(water&&water.material&&water.material.uniforms)water.material.uniforms.normalSampler.value=tex}
+  );
+  loaded.wrapS=loaded.wrapT=THREE.RepeatWrapping;
+  waterNormals=loaded;
+} catch(e){
+  console.warn('Water normal map fallback used:', e);
+}
 const water=new Water(new THREE.PlaneGeometry(10000,10000),{
   textureWidth:mobile?256:512,textureHeight:mobile?256:512,waterNormals,
   sunDirection:sun.clone(),sunColor:0xfff4e0,waterColor:0x0b3a55,distortionScale:2.4,fog:true});
@@ -334,13 +360,19 @@ function camAt(p,sx){
   vB.set(lerp(a.l[0],b.l[0],t),lerp(a.l[1],b.l[1],t),lerp(a.l[2],b.l[2],t));
   camera.position.set(sx+vA.x,Math.max(3,vA.y),vA.z);camera.lookAt(sx+vB.x,vB.y,vB.z);
 }
-function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<820?58:42;
-  if(w>820)camera.setViewOffset(w,h,-w*.17,0,w,h);else camera.clearViewOffset();camDist=w<820?1.3:1.15;camera.updateProjectionMatrix()}
+function resize(){
+  const w=Math.max(1, host.clientWidth || window.innerWidth), h=Math.max(1, host.clientHeight || window.innerHeight);
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<820?58:42;
+  if(w>820)camera.setViewOffset(w,h,-w*.17,0,w,h);else camera.clearViewOffset();
+  camDist=w<820?1.3:1.15;camera.updateProjectionMatrix();
+}
 addEventListener('resize',resize);resize();
 
-let target=0,prog=0,lastStep=-1,lastX=0,visible=false;
+let target=0,prog=0,lastStep=-1,lastX=0,visible=true,hasRendered=false;
 const snap=location.hash==='#snap';
-new IntersectionObserver(([e])=>visible=e.isIntersecting,{rootMargin:'300px'}).observe(section);
+try {
+  new IntersectionObserver(([e])=>visible=e.isIntersecting,{rootMargin:'400px'}).observe(section);
+} catch(e){visible=true}
 function readScroll(){const r=section.getBoundingClientRect();target=clamp(-r.top/(r.height-innerHeight),0,1)}
 addEventListener('scroll',readScroll,{passive:true});readScroll();prog=target;
 const STEP_AT=[0,.12,.24,DOCK_OUT,DOCK_IN,.92];
@@ -349,7 +381,8 @@ const clock=new THREE.Clock();
 (function frame(){
   requestAnimationFrame(frame);
   const dt=Math.min(clock.getDelta(),.05);
-  if(!visible)return;
+  if(!visible && hasRendered)return;
+  hasRendered=true;
   const t=clock.elapsedTime;
   prog+=(target-prog)*(reduceMotion||snap?1:Math.min(1,dt*4));
   const p=prog;
